@@ -5,7 +5,10 @@ const multer=require('multer');
 const PDFParser=require('pdf-parse')
 const storage=multer.memoryStorage();
 const upload=multer({storage:storage})
-
+const userRouter=require("./Routes/userRoutes")
+const quizRouter=require("./Routes/quizRoutes")
+const dotenv=require("dotenv");
+dotenv.config();
 mongoose
   .connect(
     "mongodb://127.0.0.1:27017/myapp",
@@ -19,141 +22,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const credentialsModel = new mongoose.Schema({
-  email: {
-    type: String,
-    required: [true, "Credential must have a password"],
-    unique:true
-  },
-  password: {
-    type: String,
-    required: [true, "Crendentials must have a password"],
-  },
-  firstName: {
-    type: String,
-    required: [true, "Credentials must have a first name"],
-  },
-  lastName: {
-    type: String,
-    required: [true, "Credentials must have a last name"],
-  },
-});
-
-const marksModel = new mongoose.Schema({
-  quizName: {
-    type: String,
-    required:[true,"A quiz should have a name"],
-  },
-  username:{
-    type:String,
-    required:[true,"A user should have a name"],
-  },
-  obtainedMarks:{
-    type:Number,
-    required:[true,"A quiz should have marks"]
-  },
-  totalMarks:{
-    type:Number,
-    required:[true,"A quiz should have total marks"]
-  },
-  attempted:{
-    type:Boolean
-  }
-});
-
-
-const quizModel=new mongoose.Schema({
-  quizName:{
-    type:String,
-    required:[true,"Quiz must have a value"]
-  },
-  Option1:{
-    type:String,  
-  }
-  ,
-  Option2:{
-    type:String,
-    
-  },
-  Option3:{
-    type:String,
-    
-  },
-  Option4:{
-    type:String,
-  },
-  Question:{
-    type:String,
-  },
-  CorrectOption:{
-    type:String,
-  }
-})
-const tokenGenerator = (email) => {
-  return new Promise((resolve, reject) => {
-      if (email) {
-          let manipulatedEmail = '';
-          for (let i = 0; i < email.length; i++) {
-            
-              let charCode = email.charCodeAt(i);
-              // Increment the character code by 5
-              if(charCode==='.'||charCode==='@')
-              {
-                continue;
-              }
-              charCode += 5;
-              manipulatedEmail += String.fromCharCode(charCode);
-          }
-          resolve(manipulatedEmail);
-      } else {
-          reject(new Error("Invalid email"));
-      }
-  });
-};
-
-function decryptEmail(manipulatedEmail) {
-  let originalEmail = '';
-  for (let i = 0; i < manipulatedEmail.length; i++) {
-      let charCode = manipulatedEmail.charCodeAt(i);
-      // Decrement the character code by 5
-      charCode -= 5;
-      originalEmail += String.fromCharCode(charCode);
-  }
-  return originalEmail;
-}
-
-
-const quiz=new mongoose.model('Quiz',quizModel);
-const credentials = new mongoose.model("credentials", credentialsModel);
-const marks=new mongoose.model("Marks",marksModel);
-
-app.route("/api/v1/users/").post(async (req, res) => {
-  const credential = await credentials.findOne(req.body);
-  const email=req.body.email;
-  const token=await tokenGenerator(email);
-  
-  if (credential) {
-    res.status(200).json({
-      message: "Success",
-      token
-    });
-  }
-  else{
-    res.status(404).json({
-      message:"User Not Found"
-    })
-  }
-});
-
-app.route("/api/v1/users/").get((req,res)=>{
-  console.log(req.body)
-  
-})
-
 app.listen(8080, () => {
   console.log("App is listening on 8080");
 });
 
+app.use("/api/v1/users",userRouter)
+app.use("/api/v1",quizRouter);
 app.route('/api/v1/students').get((req,res)=>{
   const arr=['archit','rakshit','harshit','dameon'];
   res.status(200).json({
@@ -162,127 +36,127 @@ app.route('/api/v1/students').get((req,res)=>{
   })
 })
 
-app.route('/api/v1/teachers/quiz').post(async(req,res)=>{
-  const data=req.body;
-  console.log(data);
-  const newQuiz=await quiz.create(data);
-  res.status(200).json(newQuiz)}
-  ).get(async (req,res)=>{
-    const quizes = await quiz.find().select('quizName');
-    const uniqueQuizNamesSet = new Set(quizes.map(quiz => quiz.quizName));
-    const uniqueQuizNamesArray = Array.from(uniqueQuizNamesSet);
-    res.status(200).json(uniqueQuizNamesArray);
-})
+// app.route('/api/v1/teachers/quiz').post(async(req,res)=>{
+//   const data=req.body;
+//   console.log(data);
+//   const newQuiz=await quiz.create(data);
+//   res.status(200).json(newQuiz)}
+//   ).get(async (req,res)=>{
+//     const quizes = await quiz.find().select('quizName');
+//     const uniqueQuizNamesSet = new Set(quizes.map(quiz => quiz.quizName));
+//     const uniqueQuizNamesArray = Array.from(uniqueQuizNamesSet);
+//     res.status(200).json(uniqueQuizNamesArray);
+// })
 
-app.route('/api/v1/teachers/quiz/:id').get(async(req,res)=>{
-  const id=req.params.id;
-  console.log(id);
-  const Quiz=await quiz.find({quizName:id});
-  res.status(200).json(Quiz)
-}).delete(async (req,res)=>{
-  const id=req.params.id;
-  const deletedQuiz=await quiz.deleteMany({quizName:id});
-  if(deletedQuiz.ok)
-  {
-  res.status(201).json({
-    status:"Success",
-  })
-}
-})
+// app.route('/api/v1/teachers/quiz/:id').get(async(req,res)=>{
+//   const id=req.params.id;
+//   console.log(id);
+//   const Quiz=await quiz.find({quizName:id});
+//   res.status(200).json(Quiz)
+// }).delete(async (req,res)=>{
+//   const id=req.params.id;
+//   const deletedQuiz=await quiz.deleteMany({quizName:id});
+//   if(deletedQuiz.ok)
+//   {
+//   res.status(201).json({
+//     status:"Success",
+//   })
+// }
+// })
 
-app.route('/api/v1/teachers/quiz/:id/:Question')
-  .delete(async (req,res)=>{
-    try{
-      const id=req.body.id;
-      const Question=req.body.Question;
-      console.log(req.body)
-    const deletedQuiz=await quiz.findOneAndDelete({quizName:id,Question:Question});
-    if(deletedQuiz)
-    {
-    res.status(201).json({
-      status:"Success",
-    })
+// app.route('/api/v1/teachers/quiz/:id/:Question')
+//   .delete(async (req,res)=>{
+//     try{
+//       const id=req.body.id;
+//       const Question=req.body.Question;
+//       console.log(req.body)
+//     const deletedQuiz=await quiz.findOneAndDelete({quizName:id,Question:Question});
+//     if(deletedQuiz)
+//     {
+//     res.status(201).json({
+//       status:"Success",
+//     })
 
-    }
-}
-catch(err){
-  res.status(501).json({
-    status:"Failed",
-    err
-  })
-}
-
-
-})
+//     }
+// }
+// catch(err){
+//   res.status(501).json({
+//     status:"Failed",
+//     err
+//   })
+// }
 
 
-app.route('/api/v1/students/quiz').post(async(req,res)=>{
-  const id=req.body.quizName;
-  console.log(id);
-  const Quiz=await quiz.find({quizName:id});
-  if(Quiz.length!==0)
-  {
-    res.status(200).json(Quiz)
-  }
+// })
+
+
+// app.route('/api/v1/students/quiz').post(async(req,res)=>{
+//   const id=req.body.quizName;
+//   console.log(id);
+//   const Quiz=await quiz.find({quizName:id});
+//   if(Quiz.length!==0)
+//   {
+//     res.status(200).json(Quiz)
+//   }
   
-  else{
-    res.status(400).json({
-      status:"Failed"
-    })
-  }
-})
+//   else{
+//     res.status(400).json({
+//       status:"Failed"
+//     })
+//   }
+// })
 
-app.route('/api/v1/students/quiz/:id').get(async(req,res)=>{
-  const id=req.params.id;
-  console.log(id);
-  const Quiz=await quiz.find({quizName:id});
+// app.route('/api/v1/students/quiz/:id').get(async(req,res)=>{
+//   const id=req.params.id;
+//   console.log(id);
+//   const Quiz=await quiz.find({quizName:id});
 
-  Quiz.forEach(el => {
-    if (el.CorrectOption && el.CorrectOption.includes("Option")) {
-      const index = parseInt(el.CorrectOption.split(" ")[1]) - 1; // Extract correct option index
-      const correctOptionText = el[`Option${index + 1}`]; // Extract correct option text based on the index
-      el.CorrectOption = correctOptionText; // Update CorrectOption property with the correct option text
-    }
-  });
+//   Quiz.forEach(el => {
+//     if (el.CorrectOption && el.CorrectOption.includes("Option")) {
+//       const index = parseInt(el.CorrectOption.split(" ")[1]) - 1; // Extract correct option index
+//       const correctOptionText = el[`Option${index + 1}`]; // Extract correct option text based on the index
+//       el.CorrectOption = correctOptionText; // Update CorrectOption property with the correct option text
+//     }
+//   });
 
-  console.log(Quiz)
+//   console.log(Quiz)
 
-  res.status(200).json(Quiz);
-});
+//   res.status(200).json(Quiz);
+// });
 
 
 
-app.route('/api/v1/students/quiz/:id').post(async(req,res)=>{
-  try{
-  const data=req.body;
-  const exists=await marks.findOne({
-    username:data.username,
-    quizName:data.quizName
-  })
-  if(exists){
-    res.status(400).json({
-      status:"Fail"
-    });
-    return;
-  }
+// app.route('/api/v1/students/quiz/:id').post(async(req,res)=>{
+//   try{
+//   const data=req.body;
+//   const exists=await marks.findOne({
+//     username:data.username,
+//     quizName:data.quizName
+//   })
+//   if(exists){
+//     res.status(400).json({
+//       status:"Fail"
+//     });
+//     return;
+//   }
 
-  const mark=await marks.create(data);
-  res.status(200).json(mark);
-  console.log(mark)
-}
+//   const mark=await marks.create(data);
+//   res.status(200).json(mark);
+//   console.log(mark)
+// }
 
-catch(err)
-{
+// catch(err)
+// {
   
 
-}
-})
+// }
+// })
 
-app.route('/api/v1/students/analytics/:id').get(async(req,res)=>{
-    const id=req.params.id;
-    const markData=await marks.find({username:id});
-    res.status(200).json(markData);
-})
+// app.route('/api/v1/students/analytics/:id').get(async(req,res)=>{
+//     const id=req.params.id;
+//     const markData=await marks.find({username:id});
+//     res.status(200).json(markData);
+// })
 app.route('/api/v1/teachers/quiz/upload').post(upload.single('pdf_file'), async (req, res) => {
 
   try{
